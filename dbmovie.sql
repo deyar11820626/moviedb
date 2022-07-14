@@ -62,7 +62,7 @@ create table actor
     CONSTRAINT fk_movie_reviewer_movie FOREIGN KEY (movie_id)
     REFERENCES movie(id),
     CONSTRAINT fk_movie_reviewer_reviewer FOREIGN KEY (reviewer_id)
-    REFERENCES reviewer(id),
+    REFERENCES reviewer(id) on delete set null,
      CONSTRAINT chk_rating check (rating >0 and rating <=10)
   );
   ALTER table trailer
@@ -72,6 +72,8 @@ describe trailer;
 ALTER TABLE trailer
 ADD CONSTRAINT fk_trailer_movie
 FOREIGN KEY (movie_id) REFERENCES movie(id) on delete cascade;
+
+
 
 drop table act;
 drop table direct;
@@ -134,10 +136,299 @@ VALUES ('Emma','Thompson','female'),
             ('2','1','5'),
             ('3','1','5'),
             ('4','5','5');
+            
+      INSERT INTO movie_reviewer
+      VALUES ('4','6','5');
 	 INSERT INTO trailer (movie_id,link)
      VALUES ('2','https://www.youtube.com/watch?v=T4BzzHYQUNg'),
             ('2','https://www.youtube.com/watch?v=bRz2hY6ykGE'),
             ('1','https://www.youtube.com/watch?v=aWzlQ2N6qqg'),
             ('3','https://www.youtube.com/watch?v=gHNOXDiD9Vk'),
             ('3','https://www.youtube.com/watch?v=sWfgTiJ3sCs');
+            select * from movie_actor;
+	#1
+	SELECT id,
+           first_name, 
+           last_name, 
+           gender
+    FROM actor 
+    WHERE actor.id 
+    IN (
+                      SELECT actor_id
+                      FROM movie_actor
+                      WHERE movie_id = 
+                      (
+                        SELECT id
+                        FROM movie
+                        WHERE movie.title = 'Supernova'
+                      ));
+       #2               
+    SELECT first_name, 
+           last_name
+    FROM director 
+    WHERE director.id 
+    IN (
+                      SELECT director_id
+                      FROM movie_director
+                      WHERE movie_id = 
+                      (
+                        SELECT id
+                        FROM movie
+                        WHERE movie.title = 'Supernova'
+                      ));
+        #3
+        SELECT title as 'Movie title',
+               _year as 'Movie year',
+               duration as 'Movie time',
+               release_date as 'Date of release',
+               country as 'Movie country'
+		FROM movie 
+        WHERE country != 'USA';               
+       #4      
+	  SELECT *
+      FROM reviewer;
+	  INSERT INTO reviewer (id)
+	  VALUES ('6');
+      INSERT INTO movie_reviewer
+	  VALUES ('1','6','2');
+      SELECT *
+      FROM movie_reviewer;
+      SELECT movie.title, 
+             movie._year,
+             movie.release_date as 'Release date',
             
+             actor.first_name,
+             actor.last_name
+      FROM movie
+      inner join movie_actor on movie.id = movie_actor.movie_id
+      inner join actor on movie_actor.actor_id = actor.id
+      
+     
+      WHERE movie.id IN (
+						  SELECT movie_reviewer.movie_id
+                          FROM movie_reviewer 
+                          
+                          WHERE reviewer_id IN(
+                                                SELECT  reviewer_id 
+						                        FROM movie_reviewer  
+                                                WHERE movie_reviewer.reviewer_id  IN (
+                                                                                       SELECT id
+															                           FROM reviewer 
+                                                                                       WHERE _name IS NULL
+											                                          )
+						                      )
+				    )
+                    ;
+      
+SELECT movie.title, 
+       movie._year as 'Movie year',
+       movie.release_date as 'Release date',
+       actor.first_name,
+       actor.last_name,
+       director.first_name,
+       director.last_name
+FROM movie
+INNER JOIN movie_actor ON movie.id = movie_actor.movie_id
+INNER JOIN actor ON movie_actor.actor_id = actor.id
+INNER JOIN movie_director ON movie.id = movie_director.movie_id
+INNER JOIN director ON movie_director.director_id = director.id
+WHERE movie.id IN (
+	           SELECT movie_reviewer.movie_id
+                          FROM movie_reviewer 
+                          WHERE reviewer_id IN(
+                                                SELECT  reviewer_id 
+						FROM movie_reviewer  
+                                                WHERE movie_reviewer.reviewer_id  IN (
+                                                                                       SELECT id
+										       FROM reviewer 
+                                                                                       WHERE _name IS NULL
+										      )
+						 )
+		  ) ;
+	   #5
+      SELECT title 
+      FROM movie
+      WHERE id IN(
+                   SELECT movie_id 
+                   FROM movie_director
+				   WHERE director_id IN(
+                                         SELECT id 
+										 FROM director
+										 WHERE first_name = 'Stanley' AND last_name = 'Kubrick'
+                                         )
+	            );
+         #6
+        SELECT DISTINCT _year
+        FROM movie
+        WHERE id IN(
+        SELECT movie_id
+        FROM movie_reviewer 
+        WHERE rating > 3)
+		ORDER BY _year;        
+       #7
+       SELECT title
+	   FROM movie
+	   WHERE movie.id NOT IN (
+                               SELECT movie_id 
+                               FROM movie_reviewer
+							  );
+      
+        #8
+        SELECT _name
+        FROM reviewer 
+	    WHERE id NOT IN (
+                          SELECT reviewer_id
+                          FROM movie_reviewer
+                        );
+		
+       #9
+        SELECT reviewer._name,
+               movie.title,
+               movie_reviewer.rating as 'Review stars'
+        FROM movie
+        INNER JOIN movie_reviewer ON movie.id = movie_reviewer.movie_id
+        INNER JOIN reviewer ON movie_reviewer.reviewer_id = reviewer.id
+        WHERE movie.id IN(
+		                  SELECT movie_id
+                          FROM movie_reviewer
+						  WHERE rating IS NOT NULL
+                          ) 
+          
+		ORDER BY reviewer._name , movie.title, movie_reviewer.rating;
+        select * from movie_reviewer;
+        #10
+        SELECT reviewer._name as 'Reviewer`s name',
+              movie.title as 'Movie title'
+        FROM reviewer
+        INNER JOIN movie_reviewer ON reviewer.id = movie_reviewer.reviewer_id
+        INNER JOIN movie ON movie_reviewer.movie_id = movie.id
+        WHERE reviewer.id IN(
+        SELECT reviewer_id
+        FROM movie_reviewer 
+        GROUP BY reviewer_id
+        HAVING count(movie_id)>1)
+        GROUP BY reviewer._name, movie.title;
+        #11
+        SELECT movie.title,
+              MAX( movie_reviewer.rating)
+        FROM movie 
+        INNER JOIN movie_reviewer ON movie_reviewer.movie_id=movie.id
+        WHERE movie.id IN(
+        SELECT movie_id
+        FROM movie_reviewer
+        GROUP BY movie_id
+        HAVING AVG(rating) IN(
+        SELECT MAX( average.num)
+        FROM (SELECT AVG(rating) as num FROM movie_reviewer GROUP BY movie_id) AS average))
+        GROUP BY movie.title
+        ORDER BY movie.title; 
+     
+      #12
+  SELECT _name 
+  FROM reviewer 
+  WHERE id IN (
+               SELECT reviewer_id 
+               FROM movie_reviewer
+               WHERE movie_id IN (
+                                  SELECT id 
+                                  FROM movie 
+                                  WHERE title = 'Supernova'
+                                  )
+              );   
+
+      #13
+	  insert into reviewer (_name)
+      values ('Deyar44');
+      insert into movie_reviewer
+      VALUES ('2','4','1');
+      
+      SELECT DISTINCT title
+      FROM movie 
+      WHERE id IN(
+      SELECT movie_id
+      FROM movie_reviewer 
+      WHERE reviewer_id NOT IN (
+                                    SELECT id 
+                                    FROM reviewer
+									WHERE _name = 'Deyar44'
+                                    )
+                                    );
+                                    select * from movie_reviewer;
+      
+ 
+ #14
+ SELECT reviewer._name,
+        movie.title,
+        movie_reviewer. rating
+ FROM reviewer
+ INNER JOIN movie_reviewer ON movie_reviewer.reviewer_id = reviewer.id
+ INNER JOIN movie ON movie.id = movie_reviewer.movie_id
+ WHERE movie.id IN(
+ SELECT movie_id
+ FROM movie_reviewer
+ WHERE rating IN (SELECT MIN(rating)
+ FROM movie_reviewer)) AND reviewer.id 	IN (SELECT reviewer_id
+ FROM movie_reviewer
+ WHERE rating IN (SELECT MIN(rating)
+ FROM movie_reviewer));
+        
+SELECT reviewer._name,
+        movie.title,
+        movie_reviewer. rating
+ FROM reviewer
+ INNER JOIN movie_reviewer ON movie_reviewer.reviewer_id = reviewer.id
+ INNER JOIN movie ON movie.id = movie_reviewer.movie_id
+ WHERE movie.id IN(
+        SELECT movie_id
+        FROM movie_reviewer
+        GROUP BY movie_id
+        HAVING AVG(rating) IN(
+        SELECT MIN( average.num)
+        FROM (SELECT AVG(rating) as num FROM movie_reviewer GROUP BY movie_id) AS average));
+        #15
+SELECT title
+FROM movie
+WHERE id IN (
+			 SELECT movie_id
+			 FROM movie_director
+			 WHERE director_id IN (
+								   SELECT id 
+                                   FROM director 
+								   WHERE first_name = 'Martin'
+                                   )
+			);
+
+  #16
+       SELECT title
+       FROM movie
+       WHERE id IN(
+       SELECT movie_id
+       FROM movie_actor
+       WHERE actor_id IN(
+       SELECT actor_id
+       FROM movie_actor 
+       GROUP BY actor_id
+       HAVING count(movie_id) >=2));
+insert into movie_reviewer values ('4','2','1');
+ select * from movie_reviewer;
+ select * from movie;
+ select * from reviewer;
+ INSERT INTO movie_reviewer
+ Values ('1','4','9');
+ INSERT INTO movie_reviewer
+ Values ('2','5','9');
+        SELECT _year, 
+               count(id) as 'count' 
+        FROM movie
+        group by _year
+	    ORDER BY _year;
+       
+ #from the lowest to highest
+ SELECT movie.title,
+        AVG(movie_reviewer.rating)
+ FROM movie
+ INNER JOIN movie_reviewer ON movie.id = movie_reviewer.movie_id
+ GROUP BY movie_reviewer.movie_id
+ ORDER BY  AVG(movie_reviewer.rating),movie.title;
+
+       
