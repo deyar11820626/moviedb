@@ -146,6 +146,10 @@ VALUES ('Emma','Thompson','female'),
             ('3','https://www.youtube.com/watch?v=gHNOXDiD9Vk'),
             ('3','https://www.youtube.com/watch?v=sWfgTiJ3sCs');
             select * from movie_actor;
+	INSERT INTO reviewer (id)
+	  VALUES ('6');
+      INSERT INTO movie_reviewer
+	  VALUES ('1','6','2');
 	#1
 	SELECT id,
            first_name, 
@@ -184,42 +188,8 @@ VALUES ('Emma','Thompson','female'),
                country as 'Movie country'
 		FROM movie 
         WHERE country != 'USA';               
-       #4      
-	  SELECT *
-      FROM reviewer;
-	  INSERT INTO reviewer (id)
-	  VALUES ('6');
-      INSERT INTO movie_reviewer
-	  VALUES ('1','6','2');
-      SELECT *
-      FROM movie_reviewer;
-      SELECT movie.title, 
-             movie._year,
-             movie.release_date as 'Release date',
-            
-             actor.first_name,
-             actor.last_name
-      FROM movie
-      inner join movie_actor on movie.id = movie_actor.movie_id
-      inner join actor on movie_actor.actor_id = actor.id
-      
-     
-      WHERE movie.id IN (
-						  SELECT movie_reviewer.movie_id
-                          FROM movie_reviewer 
-                          
-                          WHERE reviewer_id IN(
-                                                SELECT  reviewer_id 
-						                        FROM movie_reviewer  
-                                                WHERE movie_reviewer.reviewer_id  IN (
-                                                                                       SELECT id
-															                           FROM reviewer 
-                                                                                       WHERE _name IS NULL
-											                                          )
-						                      )
-				    )
-                    ;
-      
+       #4 find those movies where reviewer is unknown.
+       #Return movie title, year, release date, director first name, last name, actor first name, last name  
 SELECT movie.title, 
        movie._year as 'Movie year',
        movie.release_date as 'Release date',
@@ -233,38 +203,24 @@ INNER JOIN actor ON movie_actor.actor_id = actor.id
 INNER JOIN movie_director ON movie.id = movie_director.movie_id
 INNER JOIN director ON movie_director.director_id = director.id
 WHERE movie.id IN (
-	           SELECT movie_reviewer.movie_id
-                          FROM movie_reviewer 
-                          WHERE reviewer_id IN(
-                                                SELECT  reviewer_id 
-						FROM movie_reviewer  
-                                                WHERE movie_reviewer.reviewer_id  IN (
-                                                                                       SELECT id
-										       FROM reviewer 
-                                                                                       WHERE _name IS NULL
-										      )
-						 )
+	               SELECT movie_reviewer.movie_id
+                   FROM movie_reviewer 
+                   INNER JOIN reviewer ON movie_reviewer.reviewer_id = reviewer.id
+				   WHERE reviewer._name IS NULL
 		  ) ;
 	   #5
-      SELECT title 
-      FROM movie
-      WHERE id IN(
-                   SELECT movie_id 
-                   FROM movie_director
-				   WHERE director_id IN(
-                                         SELECT id 
-										 FROM director
-										 WHERE first_name = 'Stanley' AND last_name = 'Kubrick'
-                                         )
-	            );
+ SELECT movie.title 
+ FROM movie
+ INNER JOIN movie_director ON movie.id = movie_director.movie_id
+ INNER JOIN director ON movie_director.director_id = director.id
+ WHERE first_name = 'Stanley' AND last_name = 'Kubrick';
+						
          #6
         SELECT DISTINCT _year
         FROM movie
-        WHERE id IN(
-        SELECT movie_id
-        FROM movie_reviewer 
-        WHERE rating > 3)
-		ORDER BY _year;        
+        INNER JOIN movie_reviewer ON movie.id = movie_reviewer.movie_id
+        WHERE rating > 3
+        ORDER BY _year;  
        #7
        SELECT title
 	   FROM movie
@@ -272,7 +228,7 @@ WHERE movie.id IN (
                                SELECT movie_id 
                                FROM movie_reviewer
 							  );
-      
+        
         #8
         SELECT _name
         FROM reviewer 
@@ -282,20 +238,15 @@ WHERE movie.id IN (
                         );
 		
        #9
-        SELECT reviewer._name,
-               movie.title,
-               movie_reviewer.rating as 'Review stars'
-        FROM movie
-        INNER JOIN movie_reviewer ON movie.id = movie_reviewer.movie_id
-        INNER JOIN reviewer ON movie_reviewer.reviewer_id = reviewer.id
-        WHERE movie.id IN(
-		                  SELECT movie_id
-                          FROM movie_reviewer
-						  WHERE rating IS NOT NULL
-                          ) 
-          
-		ORDER BY reviewer._name , movie.title, movie_reviewer.rating;
-        select * from movie_reviewer;
+SELECT reviewer._name,
+       movie.title,
+       movie_reviewer.rating as 'Review stars'
+FROM movie
+INNER JOIN movie_reviewer ON movie.id = movie_reviewer.movie_id
+INNER JOIN reviewer ON movie_reviewer.reviewer_id = reviewer.id
+WHERE movie_reviewer.rating IS NOT NULL
+ORDER BY reviewer._name , movie.title, movie_reviewer.rating;
+        
         #10
         SELECT reviewer._name as 'Reviewer`s name',
               movie.title as 'Movie title'
